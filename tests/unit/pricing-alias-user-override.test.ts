@@ -1,47 +1,83 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { findMergedModelPricing } from "../../src/lib/db/settings/pricing.ts";
+import {
+  findLayeredModelPricing,
+  type PricingLayerSet,
+} from "../../src/lib/db/settings/pricing.ts";
 
-const override = { input: 9.75, output: 78, cached: 0, reasoning: 78, cache_creation: 0 };
-const builtIn = { input: 1, output: 2, cached: 0.1, reasoning: 2, cache_creation: 1 };
+const userOnCanonical = { input: 9.75, output: 78 };
+const defaultOnAlias = { input: 1, output: 2 };
+const userOnAlias = { input: 3, output: 4 };
+const defaultOnCanonical = { input: 8, output: 9 };
 
-test("a user override stored on the alias prices usage recorded under the provider id", () => {
-  const pricing = {
-    cheaperinference: {
-      "claude-opus-4.8": builtIn,
-    },
-    cinf: {
-      "gpt-5-pro": override,
-    },
+function layers(partial: Partial<PricingLayerSet>): PricingLayerSet {
+  return {
+    user: {},
+    modelsDev: {},
+    litellm: {},
+    defaults: {},
+    ...partial,
   };
+}
 
-  assert.deepEqual(findMergedModelPricing(pricing, "cheaperinference", "gpt-5-pro"), override);
-  assert.deepEqual(pricing.cinf["gpt-5-pro"], override);
-  assert.equal(pricing.cheaperinference["gpt-5-pro"], undefined);
+test("a user override on the canonical id beats a shipped row on the alias", () => {
+  const pricing = layers({
+    user: { codex: { "gpt-6-sol": userOnCanonical } },
+    defaults: { cx: { "gpt-6-sol": defaultOnAlias, "gpt-6-sol-max": { input: 6, output: 6 } } },
+  });
+
+  assert.deepEqual(findLayeredModelPricing(pricing, "codex", "gpt-6-sol"), userOnCanonical);
+  // The shipped tier must not satisfy this lookup: the caller still has to
+  // try the base id on the user table.
+  assert.equal(findLayeredModelPricing(pricing, "codex", "gpt-6-sol-max"), null);
+  assert.equal(pricing.user.codex["gpt-6-sol"], userOnCanonical);
+  assert.equal(pricing.defaults.cx["gpt-6-sol-max"].input, 6);
 });
 
-test("a built-in id row still prices when the alias table does not have that model", () => {
-  const pricing = {
-    cheaperinference: { "claude-opus-4.8": builtIn },
-    cinf: { "gpt-5-pro": override },
-  };
-  assert.deepEqual(findMergedModelPricing(pricing, "cheaperinference", "claude-opus-4.8"), builtIn);
+test("a user override on the alias beats a shipped row on the canonical id", () => {
+  const pricing = layers({
+    user: { cinf: { "gpt-5-pro": userOnAlias } },
+    defaults: { cheaperinference: { "claude-opus-4.8": defaultOnCanonical } },
+  });
+
+  assert.deepEqual(findLayeredModelPricing(pricing, "cheaperinference", "gpt-5-pro"), userOnAlias);
+  assert.deepEqual(
+    findLayeredModelPricing(pricing, "cheaperinference", "claude-opus-4.8"),
+    defaultOnCanonical
+  );
+  assert.equal(pricing.defaults.cheaperinference["gpt-5-pro"], undefined);
 });
 
-test("an alias override wins when the id table also has that model", () => {
-  const pricing = {
-    cheaperinference: { "gpt-5-pro": { input: 1, output: 2 } },
-    cinf: { "gpt-5-pro": override },
-  };
-  assert.deepEqual(findMergedModelPricing(pricing, "cheaperinference", "gpt-5-pro"), override);
-  assert.deepEqual(findMergedModelPricing(pricing, "cinf", "gpt-5-pro"), override);
+test("two user overrides collide on the requested key, not by alias order", () => {
+  const pricing = layers({
+    user: {
+      codex: { "gpt-6-sol": userOnCanonical },
+      cx: { "gpt-6-sol": userOnAlias },
+    },
+  });
+
+  assert.deepEqual(findLayeredModelPricing(pricing, "codex", "gpt-6-sol"), userOnCanonical);
+  assert.deepEqual(findLayeredModelPricing(pricing, "cx", "gpt-6-sol"), userOnAlias);
+});
+
+test("with no user row, a missing model still uses the alias or canonical catalog", () => {
+  const pricing = layers({
+    defaults: {
+      cx: { "gpt-6-sol": defaultOnAlias },
+      cheaperinference: { "claude-opus-4.8": defaultOnCanonical },
+    },
+  });
+
+  assert.deepEqual(findLayeredModelPricing(pricing, "codex", "gpt-6-sol"), defaultOnAlias);
+  assert.deepEqual(findLayeredModelPricing(pricing, "cinf", "claude-opus-4.8"), defaultOnCanonical);
 });
 
 test("a model with no row on either key stays unpriced", () => {
-  const pricing = {
-    cheaperinference: { "claude-opus-4.8": builtIn },
-    cinf: { "gpt-5-pro": override },
-  };
-  assert.equal(findMergedModelPricing(pricing, "cheaperinference", "not-a-model"), null);
-  assert.equal(findMergedModelPricing(pricing, "missing-provider", "gpt-5-pro"), null);
+  const pricing = layers({
+    user: { cinf: { "gpt-5-pro": userOnAlias } },
+    defaults: { cheaperinference: { "claude-opus-4.8": defaultOnCanonical } },
+  });
+
+  assert.equal(findLayeredModelPricing(pricing, "cheaperinference", "not-a-model"), null);
+  assert.equal(findLayeredModelPricing(pricing, "missing-provider", "gpt-5-pro"), null);
 });
