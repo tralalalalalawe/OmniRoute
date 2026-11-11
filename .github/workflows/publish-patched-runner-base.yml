@@ -6,7 +6,7 @@
 # It does not run docker-publish.yml and does not push diegosouzapw/omniroute
 # or ghcr.io/cheaper-inference/omniroute. After push, confirm the tag with an
 # anonymous pull. Do not PATCH /user/packages: GITHUB_TOKEN gets 404 there.
-# Pricing lookup prefers a user row on either the alias or the canonical id.
+# Pricing lookup field-merges layers. A user field wins on either key.
 
 name: Publish patched runner-base image
 
