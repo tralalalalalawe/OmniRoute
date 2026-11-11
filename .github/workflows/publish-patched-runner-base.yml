@@ -4,7 +4,8 @@
 # fork's default branch stays release/v3.8.54, so the build is triggered by a
 # push of this file on the patch branch instead of a dispatch or a merge.
 # It does not run docker-publish.yml and does not push diegosouzapw/omniroute
-# or ghcr.io/cheaper-inference/omniroute.
+# or ghcr.io/cheaper-inference/omniroute. After push, confirm the tag with an
+# anonymous pull. Do not PATCH /user/packages: GITHUB_TOKEN gets 404 there.
 
 name: Publish patched runner-base image
 
