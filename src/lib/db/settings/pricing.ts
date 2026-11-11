@@ -202,10 +202,61 @@ export function findModelPricing(
   );
 }
 
+function providerAlias(provider: string): string | undefined {
+  const direct = PROVIDER_ID_TO_ALIAS[provider];
+  if (typeof direct === "string") return direct.toLowerCase();
+  const found = Object.entries(PROVIDER_ID_TO_ALIAS).find(([id]) => id.toLowerCase() === provider);
+  return typeof found?.[1] === "string" ? found[1].toLowerCase() : undefined;
+}
+
+function canonicalIdsForAlias(alias: string): string[] {
+  return Object.entries(PROVIDER_ID_TO_ALIAS)
+    .filter(([, mapped]) => typeof mapped === "string" && mapped.toLowerCase() === alias)
+    .map(([id]) => id.toLowerCase());
+}
+
+/**
+ * Provider keys that can hold a price for this id. The pricing editor writes
+ * user overrides on the registry alias (`pricingKey || alias`). Defaults for
+ * some providers, including Cheaper Inference, live on the canonical id. A
+ * model missing from the id table must still see the alias row, and an alias
+ * row wins when both exist because that is the row the editor shows.
+ */
+export function pricingProviderCandidates(provider: string): string[] {
+  const key = (provider || "").trim().toLowerCase();
+  if (!key) return [];
+  const seeds = [key];
+  const stripped = key.replace(/-cn$/, "");
+  if (stripped && stripped !== key) seeds.push(stripped);
+  const ordered: string[] = [];
+  for (const seed of seeds) {
+    const alias = providerAlias(seed);
+    if (alias) ordered.push(alias);
+    ordered.push(seed);
+    ordered.push(...canonicalIdsForAlias(seed));
+  }
+  return [...new Set(ordered)];
+}
+
+/** First pricing row for `model` across {@link pricingProviderCandidates}. Does not copy rows. */
+export function findMergedModelPricing(
+  pricing: PricingByProvider,
+  provider: string,
+  model: string,
+  find: PricingKeyFinder = findKeyInsensitive
+): JsonRecord | null {
+  for (const providerKey of pricingProviderCandidates(provider)) {
+    const table = find<PricingModels>(pricing, providerKey);
+    if (!table) continue;
+    const row = findModelPricing(table, model, find);
+    if (row) return row;
+  }
+  return null;
+}
+
 export async function getPricingForModel(provider: string, model: string) {
   const pricing = (await getCachedPricing()) as PricingByProvider;
-  const providerPricing = findProviderPricing(pricing, provider);
-  return providerPricing ? findModelPricing(providerPricing, model) : null;
+  return findMergedModelPricing(pricing, provider, model);
 }
 
 export async function updatePricing(pricingData: PricingByProvider) {
