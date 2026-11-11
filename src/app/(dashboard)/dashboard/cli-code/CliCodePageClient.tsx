@@ -59,7 +59,7 @@ export default function CliCodePageClient({
   const tCommon = useTranslations("cliCommon");
 
   // ── Batch statuses ──────────────────────────────────────────────────────────
-  const { statuses, loading, error, refetch } = useToolBatchStatuses();
+  const { statuses, loading, error, localOnly, refetch } = useToolBatchStatuses();
 
   // ── Providers ───────────────────────────────────────────────────────────────
   const [hasActiveProviders, setHasActiveProviders] = useState<boolean>(false);
@@ -166,6 +166,7 @@ export default function CliCodePageClient({
         statuses={statuses}
         loading={loading}
         error={Boolean(error)}
+        localOnly={localOnly}
       />
 
       {/* Filter row */}

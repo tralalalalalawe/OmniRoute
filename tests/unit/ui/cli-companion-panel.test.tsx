@@ -81,6 +81,48 @@ describe("CLI companion copy-only flow", () => {
     expect(screen.getByText(/No executable CLI targets/)).toBeTruthy();
   });
 
+  it("explains a local-only refusal without calling it a retryable error", () => {
+    render(
+      <CliCompanionPanel
+        targets={targets}
+        statuses={null}
+        loading={false}
+        error={false}
+        localOnly
+      />
+    );
+    expect(screen.getAllByText("Unavailable here")).toHaveLength(3);
+    expect(screen.queryByText("An error occurred")).toBeNull();
+    expect(screen.queryByText(/Refresh detection to retry/)).toBeNull();
+    expect(screen.getByText(/refreshing will not detect CLIs/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy: Check terminal contexts" })).toBeTruthy();
+  });
+
+  it("keeps a real detection failure distinct from a missing binary", () => {
+    const missing = {
+      claude: {
+        detection: { installed: false, runnable: false },
+        config: { status: "not_installed" as const },
+      },
+    };
+    const view = render(
+      <CliCompanionPanel targets={targets} statuses={missing} loading={false} error={false} />
+    );
+    expect(screen.getByText("Not detected")).toBeTruthy();
+    expect(screen.queryByText("An error occurred")).toBeNull();
+    view.rerender(
+      <CliCompanionPanel
+        targets={targets}
+        statuses={null}
+        loading={false}
+        error
+        localOnly={false}
+      />
+    );
+    expect(screen.getAllByText("An error occurred")).toHaveLength(3);
+    expect(screen.getByRole("alert").textContent).toMatch(/Refresh detection to retry/);
+  });
+
   it("announces clipboard failure without claiming success", async () => {
     writeText.mockRejectedValue(new Error("clipboard denied"));
     Object.defineProperty(document, "execCommand", {

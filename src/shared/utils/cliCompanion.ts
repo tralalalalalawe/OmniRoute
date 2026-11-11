@@ -50,12 +50,31 @@ export function buildCompanionCommands(target: CompanionTarget, context: string,
   return commands;
 }
 
+/**
+ * The authz proxy refuses `/api/cli-tools/all-statuses` from a public dashboard
+ * with this exact envelope. It is the local-only spawn guard, not a failed probe.
+ */
+export function isLocalOnlyCliStatusResponse(status: number, body: string): boolean {
+  if (status !== 403) return false;
+  try {
+    const parsed = JSON.parse(body) as { error?: { code?: unknown } };
+    return parsed?.error?.code === "LOCAL_ONLY";
+  } catch {
+    return false;
+  }
+}
+
 export function companionStatus(
   status: ToolBatchStatus | undefined,
   loading: boolean,
-  error: boolean
+  error: boolean,
+  localOnly = false
 ) {
   if (loading) return { detection: "loading", runtime: "loading", configuration: "loading" };
+  // A real failure still wins. The local-only refusal is only the fetch itself.
+  if (localOnly && !error) {
+    return { detection: "hostOnly", runtime: "hostOnly", configuration: "hostOnly" };
+  }
   if (error || status?.error)
     return { detection: "error", runtime: "error", configuration: "error" };
   if (!status) return { detection: "unknown", runtime: "unknown", configuration: "unknown" };
