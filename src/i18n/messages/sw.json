@@ -13263,7 +13263,9 @@
       "configureHint": "Amri hii shirikishi huandika usanidi wa CLI kwenye kompyuta unayoiendeshea.",
       "runHint": "Uigaji huonyesha mpango wa uzinduzi bila kuanzisha CLI. Huu si mtihani wa uzalishaji wa majibu ya modeli.",
       "copyFailed": "Imeshindwa kunakili. Chagua na unakili amri mwenyewe.",
-      "empty": "Hakuna zana za CLI zinazoweza kuendeshwa katika toleo hili. Tumia miongozo ya zana iliyo hapa chini."
+      "empty": "Hakuna zana za CLI zinazoweza kuendeshwa katika toleo hili. Tumia miongozo ya zana iliyo hapa chini.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

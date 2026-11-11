@@ -73,20 +73,25 @@ jobs:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: echo "ghcr.io/tralalalalalawe/omniroute@${IMAGE_DIGEST}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Allow unauthenticated pulls of this package
+      - name: Confirm the pushed tag is anonymously pullable
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: 3.8.53-profile-catalog-401-${{ github.sha }}
         run: |
           set -eu
-          code=$(curl -sS -o /tmp/pkg-vis.json -w '%{http_code}' \
-            -X PATCH \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/user/packages/container/omniroute \
-            -d '{"visibility":"public"}')
-          echo "visibility_http=${code}"
-          if [ "$code" != "200" ] && [ "$code" != "204" ]; then
-            python3 -c 'import json; d=json.load(open("/tmp/pkg-vis.json")); print(d.get("message","")); print(d.get("documentation_url",""))'
+          # The package is already public. GITHUB_TOKEN cannot PATCH /user/packages
+          # (that call 404s). Prove a pull with no credentials instead.
+          challenge=$(curl -sSI -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+            "https://ghcr.io/v2/tralalalalalawe/omniroute/manifests/${IMAGE_TAG}" | tr -d '\r')
+          scope=$(printf '%s\n' "$challenge" | awk 'BEGIN{IGNORECASE=1} /^www-authenticate:/ {print; exit}')
+          echo "$scope" | grep -q 'scope="repository:tralalalalalawe/omniroute:pull"'
+          token=$(curl -fsS "https://ghcr.io/token?service=ghcr.io&scope=repository:tralalalalalawe/omniroute:pull" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+          code=$(curl -sS -o /tmp/manifest.json -D /tmp/manifest.hdr -w '%{http_code}' \
+            -H "Authorization: Bearer ${token}" \
+            -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+            "https://ghcr.io/v2/tralalalalalawe/omniroute/manifests/${IMAGE_TAG}")
+          echo "manifest_http=${code}"
+          if [ "$code" != "200" ]; then
             exit 1
           fi
+          awk 'BEGIN{IGNORECASE=1} /^docker-content-digest:/ {print}' /tmp/manifest.hdr

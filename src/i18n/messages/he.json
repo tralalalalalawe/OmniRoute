@@ -13263,7 +13263,9 @@
       "configureHint": "פקודה אינטראקטיבית זו כותבת את הגדרות ה־CLI במחשב שבו מריצים אותה.",
       "runHint": "הרצת ניסיון מציגה את תוכנית ההפעלה בלי להפעיל את ה־CLI. זה אינו מבחן להפעלת המודל.",
       "copyFailed": "לא ניתן להעתיק. בחרו את הפקודה והעתיקו אותה ידנית.",
-      "empty": "אין כלי CLI ניתנים להפעלה בגרסה זו. השתמשו במדריכי הכלים שלהלן."
+      "empty": "אין כלי CLI ניתנים להפעלה בגרסה זו. השתמשו במדריכי הכלים שלהלן.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {
