@@ -257,11 +257,12 @@ function layerHasProviderTable(
 /**
  * Price one model across the provider id and its alias.
  *
- * A user-layer row on any candidate key beats a synced or shipped row on every
- * key. Within one layer, the requested key wins, then the alias, then the
- * canonical id. That is the collision rule: two explicit overrides of the same
- * model stay distinct, and the lookup uses the one stored on the id it was
- * given.
+ * Fields merge in the same order as {@link getPricing}: defaults, then synced,
+ * then models.dev, then user. A user field beats the same field from every
+ * lower layer. A user row that sets only some fields keeps the unset fields
+ * from the lower layers. Within one layer, the requested key wins, then the
+ * alias, then the canonical id. Two explicit user rows stay distinct, and the
+ * lookup uses the one stored on the id it was given.
  *
  * Shipped rows on a sibling key are not used once the requested key has any
  * user row. Otherwise a catalog tier on the alias (Codex prices live on `cx`)
@@ -279,18 +280,25 @@ export function findLayeredModelPricing(
   if (keys.length === 0) return null;
   const requestedKey = keys[0];
   const requestedHasUserTable = layerHasProviderTable(layers.user, requestedKey, find);
+  const merged: JsonRecord = {};
+  let found = false;
 
-  for (const layerName of PRICING_LAYER_PRECEDENCE) {
+  // Low to high, so a user field overwrites a catalog field. Keys are applied
+  // reverse-candidate order so the requested id overwrites its alias.
+  for (const layerName of [...PRICING_LAYER_PRECEDENCE].reverse()) {
     const siblingCatalog = layerName !== "user" && requestedHasUserTable;
     const candidateKeys = siblingCatalog ? [requestedKey] : keys;
-    for (const providerKey of candidateKeys) {
-      const table = find<PricingModels>(layers[layerName], providerKey);
+    for (let index = candidateKeys.length - 1; index >= 0; index -= 1) {
+      const table = find<PricingModels>(layers[layerName], candidateKeys[index]);
       if (!table) continue;
       const row = findModelPricing(table, model, find);
-      if (row) return row;
+      if (!row) continue;
+      Object.assign(merged, row);
+      found = true;
     }
   }
-  return null;
+
+  return found ? merged : null;
 }
 
 export async function getPricingForModel(provider: string, model: string) {

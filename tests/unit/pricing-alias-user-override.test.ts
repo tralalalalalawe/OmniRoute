@@ -72,6 +72,24 @@ test("with no user row, a missing model still uses the alias or canonical catalo
   assert.deepEqual(findLayeredModelPricing(pricing, "cinf", "claude-opus-4.8"), defaultOnCanonical);
 });
 
+test("a partial user row keeps unset fields from the same key and ignores the sibling catalog", () => {
+  const pricing = layers({
+    user: { codex: { "gpt-6-sol": { input: 3 } } },
+    defaults: {
+      codex: { "gpt-6-sol": { input: 1, output: 2 } },
+      cx: { "gpt-6-sol": { input: 6, output: 6 }, "gpt-6-sol-max": { input: 12, output: 12 } },
+    },
+  });
+
+  assert.deepEqual(findLayeredModelPricing(pricing, "codex", "gpt-6-sol"), {
+    input: 3,
+    output: 2,
+  });
+  assert.equal(findLayeredModelPricing(pricing, "codex", "gpt-6-sol-max"), null);
+  assert.equal(pricing.user.codex["gpt-6-sol"].input, 3);
+  assert.equal(pricing.defaults.cx["gpt-6-sol"].output, 6);
+});
+
 test("a model with no row on either key stays unpriced", () => {
   const pricing = layers({
     user: { cinf: { "gpt-5-pro": userOnAlias } },
