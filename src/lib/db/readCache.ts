@@ -125,6 +125,14 @@ export async function getCachedPricing(): Promise<Record<string, unknown>> {
     return getPricing();
   });
 }
+
+/** Same invalidation scope as {@link getCachedPricing}. Keeps the user layer separate. */
+export async function getCachedPricingLayers(): Promise<Record<string, unknown>> {
+  return pricingCache.load("pricing-layers", async () => {
+    const { getPricingLayers } = await import("@/lib/db/settings/pricing");
+    return getPricingLayers();
+  });
+}
 /**
  * Cached wrapper for getProviderConnections.
  * Used in request hot-paths (usageStats, callLogs, usageHistory, catalog, virtualFactory).
