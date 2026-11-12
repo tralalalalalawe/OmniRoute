@@ -8,6 +8,7 @@
 # anonymous pull. Do not PATCH /user/packages: GITHUB_TOKEN gets 404 there.
 # Pricing lookup field-merges layers. A user field wins on either key.
 # The Home topology error badge ignores disabled connections and stale failures.
+# A push of this file on the patch branch publishes that branch's head.
 
 name: Publish patched runner-base image
 
