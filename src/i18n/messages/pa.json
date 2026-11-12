@@ -13340,7 +13340,9 @@
       "configureHint": "ਇਹ ਇੰਟਰਐਕਟਿਵ ਕਮਾਂਡ ਉਸ ਕੰਪਿਊਟਰ ਉੱਤੇ CLI ਕੌਂਫਿਗਰੇਸ਼ਨ ਲਿਖਦੀ ਹੈ ਜਿੱਥੇ ਤੁਸੀਂ ਇਸਨੂੰ ਚਲਾਉਂਦੇ ਹੋ।",
       "runHint": "ਅਜ਼ਮਾਇਸ਼ੀ ਚਲਾਉਣਾ CLI ਸ਼ੁਰੂ ਕੀਤੇ ਬਿਨਾਂ ਸ਼ੁਰੂਆਤ ਦੀ ਯੋਜਨਾ ਵਿਖਾਉਂਦਾ ਹੈ। ਇਹ ਮਾਡਲ ਚਲਾਉਣ ਦੀ ਜਾਂਚ ਨਹੀਂ ਹੈ।",
       "copyFailed": "ਕਾਪੀ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਕਮਾਂਡ ਚੁਣ ਕੇ ਹੱਥੀਂ ਕਾਪੀ ਕਰੋ।",
-      "empty": "ਇਸ ਵਰਜਨ ਵਿੱਚ ਚਲਾਉਣ ਯੋਗ CLI ਟੂਲ ਉਪਲਬਧ ਨਹੀਂ ਹਨ। ਹੇਠਾਂ ਦਿੱਤੀਆਂ ਟੂਲ ਗਾਈਡਾਂ ਵਰਤੋ।"
+      "empty": "ਇਸ ਵਰਜਨ ਵਿੱਚ ਚਲਾਉਣ ਯੋਗ CLI ਟੂਲ ਉਪਲਬਧ ਨਹੀਂ ਹਨ। ਹੇਠਾਂ ਦਿੱਤੀਆਂ ਟੂਲ ਗਾਈਡਾਂ ਵਰਤੋ।",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

@@ -13340,7 +13340,9 @@
       "configureHint": "ეს ინტერაქტიული ბრძანება CLI-ის კონფიგურაციას იმ კომპიუტერზე წერს, სადაც მას უშვებთ.",
       "runHint": "საცდელი რეჟიმი CLI-ის დაწყების გარეშე აჩვენებს გაშვების გეგმას. ეს მოდელის მუშაობის ტესტი არ არის.",
       "copyFailed": "კოპირება ვერ მოხერხდა. მონიშნეთ ბრძანება და ხელით დააკოპირეთ.",
-      "empty": "ამ ვერსიაში გასაშვები CLI ხელსაწყოები არ არის. გამოიყენეთ ქვემოთ მოცემული ხელსაწყოების გზამკვლევები."
+      "empty": "ამ ვერსიაში გასაშვები CLI ხელსაწყოები არ არის. გამოიყენეთ ქვემოთ მოცემული ხელსაწყოების გზამკვლევები.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

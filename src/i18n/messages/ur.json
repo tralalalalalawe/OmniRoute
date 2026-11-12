@@ -13263,7 +13263,9 @@
       "configureHint": "یہ تعاملی حکم اسی کمپیوٹر پر CLI کی ترتیب لکھتا ہے جہاں آپ اسے چلاتے ہیں۔",
       "runHint": "آزمائشی اجرا CLI شروع کیے بغیر اجرا کا منصوبہ دکھاتا ہے۔ یہ ماڈل چلانے کا امتحان نہیں ہے۔",
       "copyFailed": "کاپی نہیں ہو سکا۔ حکم منتخب کرکے خود کاپی کریں۔",
-      "empty": "اس ورژن میں چلنے کے قابل CLI آلات دستیاب نہیں۔ نیچے دی گئی آلات کی رہنما کتابیں استعمال کریں۔"
+      "empty": "اس ورژن میں چلنے کے قابل CLI آلات دستیاب نہیں۔ نیچے دی گئی آلات کی رہنما کتابیں استعمال کریں۔",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

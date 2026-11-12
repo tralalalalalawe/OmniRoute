@@ -4,7 +4,7 @@
 
 import { getDbInstance } from "../core";
 import { backupDbFile } from "../backup";
-import { getCachedPricing, invalidateDbCache } from "../readCache";
+import { invalidateDbCache } from "../readCache";
 import { PROVIDER_ID_TO_ALIAS } from "@omniroute/open-sse/config/providerModels.ts";
 import { invalidateUserPricingMemo } from "@/lib/catalogUserPricing";
 import { remapHistoricalLitellmRows } from "@/lib/litellmProviderMap";
@@ -103,7 +103,7 @@ function buildPricingSourceMap(layers: {
   return sourceMap;
 }
 
-async function getPricingLayers() {
+export async function getPricingLayers() {
   const db = getDbInstance();
 
   // Layer 1: Hardcoded defaults (lowest priority)
@@ -202,10 +202,109 @@ export function findModelPricing(
   );
 }
 
+function providerAlias(provider: string): string | undefined {
+  const direct = PROVIDER_ID_TO_ALIAS[provider];
+  if (typeof direct === "string") return direct.toLowerCase();
+  const found = Object.entries(PROVIDER_ID_TO_ALIAS).find(([id]) => id.toLowerCase() === provider);
+  return typeof found?.[1] === "string" ? found[1].toLowerCase() : undefined;
+}
+
+function canonicalIdsForAlias(alias: string): string[] {
+  return Object.entries(PROVIDER_ID_TO_ALIAS)
+    .filter(([, mapped]) => typeof mapped === "string" && mapped.toLowerCase() === alias)
+    .map(([id]) => id.toLowerCase());
+}
+
+export interface PricingLayerSet {
+  user: PricingByProvider;
+  modelsDev: PricingByProvider;
+  litellm: PricingByProvider;
+  defaults: PricingByProvider;
+}
+
+/**
+ * Keys that may hold this provider's price. The requested id is first so two
+ * explicit user rows resolve to the id the caller named. The alias and the
+ * canonical id follow, for a row that was saved on the other key.
+ */
+export function pricingProviderCandidates(provider: string): string[] {
+  const key = (provider || "").trim().toLowerCase();
+  if (!key) return [];
+  const seeds = [key];
+  const stripped = key.replace(/-cn$/, "");
+  if (stripped && stripped !== key) seeds.push(stripped);
+  const ordered: string[] = [];
+  for (const seed of seeds) {
+    ordered.push(seed);
+    const alias = providerAlias(seed);
+    if (alias) ordered.push(alias);
+    ordered.push(...canonicalIdsForAlias(seed));
+  }
+  return [...new Set(ordered)];
+}
+
+const PRICING_LAYER_PRECEDENCE = ["user", "modelsDev", "litellm", "defaults"] as const;
+
+function layerHasProviderTable(
+  layer: PricingByProvider,
+  providerKey: string,
+  find: PricingKeyFinder
+): boolean {
+  const table = find<PricingModels>(layer, providerKey);
+  return !!table && Object.keys(table).length > 0;
+}
+
+/**
+ * Price one model across the provider id and its alias.
+ *
+ * Fields merge in the same order as {@link getPricing}: defaults, then synced,
+ * then models.dev, then user. A user field beats the same field from every
+ * lower layer. A user row that sets only some fields keeps the unset fields
+ * from the lower layers. Within one layer, the requested key wins, then the
+ * alias, then the canonical id. Two explicit user rows stay distinct, and the
+ * lookup uses the one stored on the id it was given.
+ *
+ * Shipped rows on a sibling key are not used once the requested key has any
+ * user row. Otherwise a catalog tier on the alias (Codex prices live on `cx`)
+ * would satisfy a more specific model key before the caller's base-id override
+ * on `codex`. When the requested key has no user row, a missing model still
+ * falls through to the alias or the canonical catalog.
+ */
+export function findLayeredModelPricing(
+  layers: PricingLayerSet,
+  provider: string,
+  model: string,
+  find: PricingKeyFinder = findKeyInsensitive
+): JsonRecord | null {
+  const keys = pricingProviderCandidates(provider);
+  if (keys.length === 0) return null;
+  const requestedKey = keys[0];
+  const requestedHasUserTable = layerHasProviderTable(layers.user, requestedKey, find);
+  const merged: JsonRecord = {};
+  let found = false;
+
+  // Low to high, so a user field overwrites a catalog field. Keys are applied
+  // reverse-candidate order so the requested id overwrites its alias.
+  for (const layerName of [...PRICING_LAYER_PRECEDENCE].reverse()) {
+    const siblingCatalog = layerName !== "user" && requestedHasUserTable;
+    const candidateKeys = siblingCatalog ? [requestedKey] : keys;
+    for (let index = candidateKeys.length - 1; index >= 0; index -= 1) {
+      const table = find<PricingModels>(layers[layerName], candidateKeys[index]);
+      if (!table) continue;
+      const row = findModelPricing(table, model, find);
+      if (!row) continue;
+      Object.assign(merged, row);
+      found = true;
+    }
+  }
+
+  return found ? merged : null;
+}
+
 export async function getPricingForModel(provider: string, model: string) {
-  const pricing = (await getCachedPricing()) as PricingByProvider;
-  const providerPricing = findProviderPricing(pricing, provider);
-  return providerPricing ? findModelPricing(providerPricing, model) : null;
+  const { getCachedPricingLayers } = await import("../readCache");
+  const layers = (await getCachedPricingLayers()) as unknown as PricingLayerSet;
+  return findLayeredModelPricing(layers, provider, model);
 }
 
 export async function updatePricing(pricingData: PricingByProvider) {

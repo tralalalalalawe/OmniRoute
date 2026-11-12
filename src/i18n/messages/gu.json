@@ -13263,7 +13263,9 @@
       "configureHint": "આ સંવાદાત્મક આદેશ તમે જે કમ્પ્યુટર પર ચલાવો છો ત્યાં CLIની ગોઠવણી લખે છે.",
       "runHint": "પરીક્ષણ ચલાવ CLI શરૂ કર્યા વગર શરૂ કરવાની યોજના બતાવે છે. તે મોડેલનું પરીક્ષણ નથી.",
       "copyFailed": "કૉપિ કરી શકાયું નહીં. આદેશ પસંદ કરીને જાતે કૉપિ કરો.",
-      "empty": "આ સંસ્કરણમાં ચલાવી શકાય તેવાં CLI સાધનો ઉપલબ્ધ નથી. નીચેની સાધન માર્ગદર્શિકાઓ વાપરો."
+      "empty": "આ સંસ્કરણમાં ચલાવી શકાય તેવાં CLI સાધનો ઉપલબ્ધ નથી. નીચેની સાધન માર્ગદર્શિકાઓ વાપરો.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

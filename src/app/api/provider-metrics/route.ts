@@ -3,8 +3,17 @@ import pino from "pino";
 
 import { buildErrorBody } from "@omniroute/open-sse/utils/error.ts";
 
-import { getProviderMetrics, type ProviderMetricRow } from "@/lib/db/callLogStats";
+import {
+  getActiveProviderConnections,
+  getLatestLogicalCalls,
+  getProviderMetrics,
+  type ProviderMetricRow,
+} from "@/lib/db/callLogStats";
 import { foldMetricRowsByFamily } from "@/lib/providerFamilyAgg";
+import {
+  isCurrentActiveFailure,
+  resolveTopologyErrorWindowMs,
+} from "@/lib/usage/topologyErrorProvider";
 import { toNumber, toNumberOrNull } from "@/shared/utils/numeric";
 
 const logger = pino({ name: "provider-metrics-api" });
@@ -43,6 +52,20 @@ function toProviderMetric(row: ProviderMetricRow): ProviderMetric {
 export async function GET() {
   try {
     const rows = getProviderMetrics();
+    const activeConnections = getActiveProviderConnections();
+    const activeConnectionProviders = new Map(
+      activeConnections.map((connection) => [connection.id, connection.provider])
+    );
+    const providersWithActiveConnection = new Set(
+      activeConnections.map((connection) => connection.provider)
+    );
+    const latestCallByProvider = new Map(
+      getLatestLogicalCalls().map((call) => [call.provider, call])
+    );
+    const errorWindowMs = resolveTopologyErrorWindowMs(
+      process.env.OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS
+    );
+    const nowMs = Date.now();
 
     const metrics: Record<string, ProviderMetric> = {};
     let lastProvider = "";
@@ -57,7 +80,7 @@ export async function GET() {
           : "unknown";
       const metric = toProviderMetric(row);
       metrics[provider] = metric;
-      const { lastRequestAt, lastErrorAt, lastStatus } = metric;
+      const { lastRequestAt } = metric;
 
       const requestTs = lastRequestAt ? Date.parse(lastRequestAt) : 0;
       if (Number.isFinite(requestTs) && requestTs > lastProviderTs) {
@@ -65,12 +88,27 @@ export async function GET() {
         lastProviderTs = requestTs;
       }
 
-      // Only flag as errorProvider if the provider's MOST RECENT request was itself
-      // a failure. A provider with a historical lastErrorAt but a recent success
-      // (lastStatus 2xx/3xx) must not be shown as currently errored (#3619).
-      const isCurrentlyInError = lastStatus !== null && (lastStatus < 200 || lastStatus >= 400);
-      const errorTs = isCurrentlyInError && lastErrorAt ? Date.parse(lastErrorAt) : 0;
-      if (Number.isFinite(errorTs) && errorTs > errorProviderTs) {
+      // The badge follows the provider's newest call, and only when that call
+      // failed, is inside the window, and belongs to a connection that is still
+      // active. A recovered provider, a disabled connection, a no-auth provider
+      // with no connection, and a stale failure stay off the badge (#3619).
+      const latest = latestCallByProvider.get(provider);
+      const latestStatus = latest?.status == null ? null : toNumber(latest.status);
+      const isCurrentlyInError =
+        latestStatus !== null && (latestStatus < 200 || latestStatus >= 400);
+      const errorTs = isCurrentlyInError && latest?.timestamp ? Date.parse(latest.timestamp) : 0;
+      if (
+        isCurrentActiveFailure({
+          connectionId: latest?.connectionId,
+          provider,
+          failedAtMs: errorTs,
+          nowMs,
+          windowMs: errorWindowMs,
+          activeConnectionProviders,
+          providersWithActiveConnection,
+        }) &&
+        errorTs > errorProviderTs
+      ) {
         errorProvider = provider;
         errorProviderTs = errorTs;
       }

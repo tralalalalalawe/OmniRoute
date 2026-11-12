@@ -13263,7 +13263,9 @@
       "configureHint": "Ова интерактивна команда уписује конфигурацију CLI-ја на рачунару на ком је покренете.",
       "runHint": "Пробно покретање приказује план покретања без покретања CLI-ја. То није тест закључивања.",
       "copyFailed": "Копирање није успело. Ручно изаберите и копирајте команду.",
-      "empty": "У овој верзији нема доступних извршивих CLI циљева. Користите водиче за алате испод."
+      "empty": "У овој верзији нема доступних извршивих CLI циљева. Користите водиче за алате испод.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

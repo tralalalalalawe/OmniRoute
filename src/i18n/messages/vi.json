@@ -13263,7 +13263,9 @@
       "configureHint": "Lệnh tương tác này ghi cấu hình CLI trên máy tính nơi bạn chạy lệnh.",
       "runHint": "Chạy mô phỏng hiển thị kế hoạch khởi chạy mà không khởi động CLI. Đây không phải là kiểm thử suy luận.",
       "copyFailed": "Không thể sao chép. Hãy chọn và sao chép lệnh thủ công.",
-      "empty": "Phiên bản này không có công cụ CLI nào có thể thực thi. Hãy dùng hướng dẫn công cụ bên dưới."
+      "empty": "Phiên bản này không có công cụ CLI nào có thể thực thi. Hãy dùng hướng dẫn công cụ bên dưới.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

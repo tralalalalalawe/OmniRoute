@@ -193,6 +193,11 @@ export type CatalogResponseOptions = {
   revealHidden?: boolean;
   /** Management/lookup callers keep provider rows even when `exposeCombosOnly` is on. */
   ignoreExposeCombosOnly?: boolean;
+  /**
+   * In-process operator catalog for the model-sync scheduler. A direct function
+   * argument only — never derived from request headers. HTTP routes must not set it.
+   */
+  trustedOperatorRead?: boolean;
 };
 
 /** Build-time switches forwarded from {@link getUnifiedModelsResponse} to the catalog builder. */
@@ -201,6 +206,8 @@ type CatalogBuildFlags = {
   revealHidden?: boolean;
   /** Advertise only combos (`settings.exposeCombosOnly`). */
   combosOnly?: boolean;
+  /** Skip the client-credential gate. Set only from `trustedOperatorRead`. */
+  trustedOperatorRead?: boolean;
 };
 
 const BUILTIN_AUTO_YIELD_INTERVAL = 2;
@@ -243,11 +250,13 @@ export async function getUnifiedModelsResponse(
     } catch {}
     // #9147: yield before auth check to allow event loop tick
     await yieldCatalogBuildTurn();
-    const authRejection = await getModelCatalogAuthRejection(request, settingsForAuth, {
-      ...corsHeaders,
-      ...diagnosticHeaders,
-    });
-    if (authRejection) return authRejection;
+    if (!options.trustedOperatorRead) {
+      const authRejection = await getModelCatalogAuthRejection(request, settingsForAuth, {
+        ...corsHeaders,
+        ...diagnosticHeaders,
+      });
+      if (authRejection) return authRejection;
+    }
   } catch {
     // Fall through to full builder on auth-check failure; core handles errors.
   }
@@ -262,6 +271,7 @@ export async function getUnifiedModelsResponse(
   const buildFlags: CatalogBuildFlags = {
     combosOnly: resolveCombosOnly(settingsForAuth, options),
     revealHidden: options.revealHidden === true,
+    trustedOperatorRead: options.trustedOperatorRead === true,
   };
   try {
     return await resolveCachedCatalogResponse(
@@ -362,11 +372,13 @@ async function buildUnifiedModelsResponseCore(
       settings = await getSettings();
     } catch {}
 
-    const authRejection = await getModelCatalogAuthRejection(request, settings, {
-      ...corsHeaders,
-      ...diagnosticHeaders,
-    });
-    if (authRejection) return authRejection;
+    if (!flags.trustedOperatorRead) {
+      const authRejection = await getModelCatalogAuthRejection(request, settings, {
+        ...corsHeaders,
+        ...diagnosticHeaders,
+      });
+      if (authRejection) return authRejection;
+    }
 
     // #9147: yield after auth check before DB initialization prologue
     await yieldCatalogBuildTurn();
