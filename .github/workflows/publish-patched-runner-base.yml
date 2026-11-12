@@ -1,0 +1,103 @@
+# Publish the patched v3.8.53 runner-base image to this fork's GHCR namespace.
+#
+# GitHub only lists workflow_dispatch for files on the default branch. This
+# fork's default branch stays release/v3.8.54, so the build is triggered by a
+# push of this file on the patch branch instead of a dispatch or a merge.
+# It does not run docker-publish.yml and does not push diegosouzapw/omniroute
+# or ghcr.io/cheaper-inference/omniroute. After push, confirm the tag with an
+# anonymous pull. Do not PATCH /user/packages: GITHUB_TOKEN gets 404 there.
+# Pricing lookup field-merges layers. A user field wins on either key.
+# The Home topology error badge ignores disabled connections and stale failures.
+# A push of this file on the patch branch publishes that branch's head.
+
+name: Publish patched runner-base image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/fix-cli-profile-catalog-401-bbdd
+      - cursor/fix-topology-error-window-bbdd
+    paths:
+      - .github/workflows/publish-patched-runner-base.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-patched-runner-base-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  runner-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push runner-base
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: runner-base
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          no-cache: true
+          build-args: |
+            OMNIROUTE_USE_TURBOPACK=0
+            OMNIROUTE_BUILD_MEMORY_MB=12288
+          tags: |
+            ghcr.io/tralalalalalawe/omniroute:3.8.53-topology-window
+            ghcr.io/tralalalalalawe/omniroute:3.8.53-topology-window-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/tralalalalalawe/OmniRoute
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=3.8.53-topology-window
+
+      - name: Record image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: echo "ghcr.io/tralalalalalawe/omniroute@${IMAGE_DIGEST}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Confirm the pushed tag is anonymously pullable
+        env:
+          IMAGE_TAG: 3.8.53-topology-window-${{ github.sha }}
+        run: |
+          set -eu
+          # The package is already public. GITHUB_TOKEN cannot PATCH /user/packages
+          # (that call 404s). Prove a pull with no credentials instead.
+          challenge=$(curl -sSI -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+            "https://ghcr.io/v2/tralalalalalawe/omniroute/manifests/${IMAGE_TAG}" | tr -d '\r')
+          scope=$(printf '%s\n' "$challenge" | awk 'BEGIN{IGNORECASE=1} /^www-authenticate:/ {print; exit}')
+          echo "$scope" | grep -q 'scope="repository:tralalalalalawe/omniroute:pull"'
+          token=$(curl -fsS "https://ghcr.io/token?service=ghcr.io&scope=repository:tralalalalalawe/omniroute:pull" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+          code=$(curl -sS -o /tmp/manifest.json -D /tmp/manifest.hdr -w '%{http_code}' \
+            -H "Authorization: Bearer ${token}" \
+            -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+            "https://ghcr.io/v2/tralalalalalawe/omniroute/manifests/${IMAGE_TAG}")
+          echo "manifest_http=${code}"
+          if [ "$code" != "200" ]; then
+            exit 1
+          fi
+          awk 'BEGIN{IGNORECASE=1} /^docker-content-digest:/ {print}' /tmp/manifest.hdr

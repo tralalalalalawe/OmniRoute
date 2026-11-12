@@ -13263,7 +13263,9 @@
       "configureHint": "Wannan umarnin tattaunawa yana rubuta saitin CLI a kwamfutar da ka gudanar da shi.",
       "runHint": "Gudun gwaji yana nuna shirin farawa ba tare da fara CLI ba. Ba gwajin amsar samfurin ba ne.",
       "copyFailed": "An kasa kwafi. Zaɓi umarnin ka kwafe shi da hannu.",
-      "empty": "Babu kayan CLI da za a iya gudanarwa a wannan sigar. Yi amfani da jagororin kayan aikin da ke ƙasa."
+      "empty": "Babu kayan CLI da za a iya gudanarwa a wannan sigar. Yi amfani da jagororin kayan aikin da ke ƙasa.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

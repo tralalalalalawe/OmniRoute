@@ -13263,7 +13263,9 @@
       "configureHint": "此互動式指令會在執行該指令的電腦上寫入 CLI 設定。",
       "runHint": "模擬執行僅顯示啟動計畫，不會啟動 CLI。這不是推論測試。",
       "copyFailed": "無法複製。請選取指令並手動複製。",
-      "empty": "此版本沒有可執行的 CLI 目標。請使用下方的工具指南。"
+      "empty": "此版本沒有可執行的 CLI 目標。請使用下方的工具指南。",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

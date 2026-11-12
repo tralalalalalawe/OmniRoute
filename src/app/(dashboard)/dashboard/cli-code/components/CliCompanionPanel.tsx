@@ -16,6 +16,8 @@ interface Props {
   statuses: ToolBatchStatusMap | null;
   loading: boolean;
   error: boolean;
+  /** Status route refused with 403 LOCAL_ONLY. Detection cannot run from this dashboard. */
+  localOnly?: boolean;
 }
 
 function CompanionHostStatus({ state }: { state: ReturnType<typeof companionStatus> }) {
@@ -47,7 +49,13 @@ function CompanionHostStatus({ state }: { state: ReturnType<typeof companionStat
   );
 }
 
-export default function CliCompanionPanel({ targets, statuses, loading, error }: Props) {
+export default function CliCompanionPanel({
+  targets,
+  statuses,
+  loading,
+  error,
+  localOnly = false,
+}: Props) {
   const t = useTranslations("cliCommon.companion");
   const id = useId();
   const [selectedId, setSelectedId] = useState(targets[0]?.id || "");
@@ -55,7 +63,7 @@ export default function CliCompanionPanel({ targets, statuses, loading, error }:
   const [model, setModel] = useState("");
   const selected = targets.find((target) => target.id === selectedId) || targets[0];
   if (!selected) return <p className="text-sm text-text-main">{t("empty")}</p>;
-  const state = companionStatus(statuses?.[selected.id], loading, error);
+  const state = companionStatus(statuses?.[selected.id], loading, error, localOnly);
   const commands = buildCompanionCommands(selected, context, model);
   return (
     <section
@@ -82,6 +90,11 @@ export default function CliCompanionPanel({ targets, statuses, loading, error }:
       {state.detection === "error" && (
         <p role="alert" className="text-sm text-text-main">
           {t("detectionError")}
+        </p>
+      )}
+      {state.detection === "hostOnly" && (
+        <p role="status" className="text-sm text-text-main">
+          {t("hostOnlyNotice")}
         </p>
       )}
       <ol className="min-w-0">

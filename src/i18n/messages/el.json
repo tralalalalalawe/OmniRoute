@@ -13263,7 +13263,9 @@
       "configureHint": "Αυτή η διαδραστική εντολή γράφει τη διαμόρφωση του CLI στον υπολογιστή όπου την εκτελείτε.",
       "runHint": "Η δοκιμαστική εκτέλεση εμφανίζει το σχέδιο εκκίνησης χωρίς να ξεκινά το CLI. Δεν αποτελεί δοκιμή εξαγωγής συμπερασμάτων.",
       "copyFailed": "Η αντιγραφή απέτυχε. Επιλέξτε και αντιγράψτε την εντολή χειροκίνητα.",
-      "empty": "Δεν υπάρχουν εκτελέσιμοι στόχοι CLI σε αυτήν την έκδοση. Χρησιμοποιήστε τους οδηγούς εργαλείων παρακάτω."
+      "empty": "Δεν υπάρχουν εκτελέσιμοι στόχοι CLI σε αυτήν την έκδοση. Χρησιμοποιήστε τους οδηγούς εργαλείων παρακάτω.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

@@ -13263,7 +13263,9 @@
       "configureHint": "ఈ పరస్పర ఆదేశం మీరు అమలు చేసే కంప్యూటర్‌లో CLI కాన్ఫిగరేషన్‌ను రాస్తుంది.",
       "runHint": "ప్రయోగాత్మక అమలు CLIని ప్రారంభించకుండా ప్రారంభ ప్రణాళికను చూపుతుంది. ఇది మోడల్ అమలు పరీక్ష కాదు.",
       "copyFailed": "కాపీ చేయలేకపోయాము. ఆదేశాన్ని ఎంచుకుని మాన్యువల్‌గా కాపీ చేయండి.",
-      "empty": "ఈ సంస్కరణలో అమలు చేయగల CLI సాధనాలు లేవు. దిగువ సాధన మార్గదర్శకాలను ఉపయోగించండి."
+      "empty": "ఈ సంస్కరణలో అమలు చేయగల CLI సాధనాలు లేవు. దిగువ సాధన మార్గదర్శకాలను ఉపయోగించండి.",
+      "hostOnly": "Unavailable here",
+      "hostOnlyNotice": "CLI detection runs only on the machine hosting OmniRoute. This dashboard is not on that host, so refreshing will not detect CLIs. The terminal commands below still work on the computer where the CLI is installed."
     },
     "concept": {
       "code": {

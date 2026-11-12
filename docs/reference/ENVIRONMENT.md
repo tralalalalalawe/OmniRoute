@@ -1986,6 +1986,12 @@ Used by `open-sse/services/combo.ts` and `src/lib/quota/quotaScheduler.ts` for p
 | `OMNIROUTE_ESTIMATOR_CALIBRATION`  | _(on)_  | `open-sse/services/estimatorCalibration.ts` | Feedback calibration of the context-guard token estimator (#14931): per (provider, model, tools present) EMA of `usage.prompt_tokens` / estimate, clamped to 0.15–2.0, in memory only. `off`, `0` or `false` disables recording and application. |
 | `GROK_SUBSCRIPTION_IMAGES_ENABLED` | `false` | `open-sse/config/imageRegistry.ts`          | Registers the `xai-oauth` (`xao`) and `grok-cli` image routes. Dashboard feature flag of the same name; a DB override wins over this value.                                                                                                      |
 
+## Home topology error badge
+
+| Variable | Default | Source File | Description |
+| --- | --- | --- | --- |
+| `OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS` | `24` | `src/app/api/provider-metrics/route.ts` | How many hours a provider's newest failed call may set the Home topology error badge. A disabled connection, a provider with no active connection, and a failure older than this window do not count. Empty, zero, and non-numeric values use 24. |
+
 ## Model synchronization diagnostics
 
 | Variable | Default | Source File | Description |
