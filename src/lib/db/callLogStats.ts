@@ -145,6 +145,57 @@ export function getProviderMetrics(): ProviderMetricRow[] {
   return getDbInstance().prepare(PROVIDER_METRICS_SQL).all() as ProviderMetricRow[];
 }
 
+export interface LatestLogicalCall {
+  provider: string;
+  connectionId: string | null;
+  status: number | null;
+  timestamp: string | null;
+}
+
+/**
+ * The newest logical call per provider, including the connection that served it.
+ * The Home error badge uses this so a disabled or missing connection cannot
+ * keep a provider in error after its active connections have moved on.
+ */
+export function getLatestLogicalCalls(): LatestLogicalCall[] {
+  return getDbInstance()
+    .prepare(
+      `SELECT
+          c.provider as provider,
+          c.connection_id as connectionId,
+          c.status as status,
+          c.timestamp as timestamp
+        FROM call_logs c
+        WHERE ${logicalCallSql("c")}
+          AND c.provider IS NOT NULL
+          AND c.provider != '-'
+          AND c.id = (
+            SELECT c2.id
+            FROM call_logs c2
+            WHERE ${logicalCallSql("c2")} AND c2.provider = c.provider
+            ORDER BY c2.timestamp DESC, c2.id DESC
+            LIMIT 1
+          )`
+    )
+    .all() as LatestLogicalCall[];
+}
+
+export interface ActiveProviderConnection {
+  id: string;
+  provider: string;
+}
+
+/** Connections the operator left enabled. NULL is_active follows the schema default of on. */
+export function getActiveProviderConnections(): ActiveProviderConnection[] {
+  return getDbInstance()
+    .prepare(
+      `SELECT id, provider
+         FROM provider_connections
+        WHERE COALESCE(is_active, 1) = 1`
+    )
+    .all() as ActiveProviderConnection[];
+}
+
 // ---------------------------------------------------------------------------
 // /api/free-provider-rankings — windowed usage aggregate
 // ---------------------------------------------------------------------------

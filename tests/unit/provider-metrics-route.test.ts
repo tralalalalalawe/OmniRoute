@@ -61,20 +61,23 @@ function seedProviderConnection(provider: string) {
 
 test("GET /api/provider-metrics includes provider recency and error topology", async () => {
   const db = core.getDbInstance();
+  const earlier = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+  const middle = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const latest = new Date(Date.now() - 60 * 1000).toISOString();
   seedProviderConnection("openai");
   seedProviderConnection("anthropic");
   db.prepare(
     `INSERT INTO call_logs (id, timestamp, provider, status, duration, error_summary)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run("openai-success", "2026-05-22T10:00:00.000Z", "openai", 200, 120, null);
+  ).run("openai-success", earlier, "openai", 200, 120, null);
   db.prepare(
     `INSERT INTO call_logs (id, timestamp, provider, status, duration, error_summary)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run("anthropic-success", "2026-05-22T10:05:00.000Z", "anthropic", 200, 240, null);
+  ).run("anthropic-success", middle, "anthropic", 200, 240, null);
   db.prepare(
     `INSERT INTO call_logs (id, timestamp, provider, status, duration, error_summary)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run("openai-error", "2026-05-22T10:10:00.000Z", "openai", 500, 80, "upstream error");
+  ).run("openai-error", latest, "openai", 500, 80, "upstream error");
 
   const response = await providerMetricsRoute.GET();
   const body = (await response.json()) as ProviderMetricsResponse;
@@ -83,11 +86,11 @@ test("GET /api/provider-metrics includes provider recency and error topology", a
   assert.equal(body.metrics.openai.totalRequests, 2);
   assert.equal(body.metrics.openai.totalSuccesses, 1);
   assert.equal(body.metrics.openai.successRate, 50);
-  assert.equal(body.metrics.openai.lastRequestAt, "2026-05-22T10:10:00.000Z");
-  assert.equal(body.metrics.openai.lastErrorAt, "2026-05-22T10:10:00.000Z");
+  assert.equal(body.metrics.openai.lastRequestAt, latest);
+  assert.equal(body.metrics.openai.lastErrorAt, latest);
   assert.equal(body.metrics.openai.lastStatus, 500);
   assert.equal(body.metrics.openai.lastErrorStatus, 500);
-  assert.equal(body.metrics.anthropic.lastRequestAt, "2026-05-22T10:05:00.000Z");
+  assert.equal(body.metrics.anthropic.lastRequestAt, middle);
   assert.equal(body.metrics.anthropic.lastErrorAt, null);
   assert.deepEqual(body.topology.providers.sort(), ["anthropic", "openai"]);
   assert.equal(body.topology.lastProvider, "openai");
@@ -131,6 +134,95 @@ test("GET /api/provider-metrics errorProvider must NOT flag a provider whose mos
     "",
     "errorProvider must be empty when no provider's most recent request was a failure"
   );
+});
+
+function insertCall(
+  id: string,
+  provider: string,
+  timestamp: string,
+  status: number,
+  connectionId: string | null
+) {
+  core
+    .getDbInstance()
+    .prepare(
+      `INSERT INTO call_logs (id, timestamp, provider, connection_id, status, duration, error_summary)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(id, timestamp, provider, connectionId, status, 40, status >= 400 ? "failed" : null);
+}
+
+test("errorProvider ignores a disabled connection, a no-auth provider, and a stale failure", async () => {
+  const db = core.getDbInstance();
+  const recent = new Date(Date.now() - 60 * 1000).toISOString();
+  const stale = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  db.prepare(
+    `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run("audit-only", "audit-provider", 0, recent, recent);
+  db.prepare(
+    `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run("openai-live", "openai", 1, recent, recent);
+  insertCall("audit-502", "audit-provider", recent, 502, "audit-only");
+  insertCall("unclose-401", "uncloseai", recent, 401, "noauth");
+  insertCall("cfp-503", "cloudflare-playground", recent, 503, "noauth");
+  insertCall("openai-stale", "openai", stale, 500, "openai-live");
+
+  const response = await providerMetricsRoute.GET();
+  const body = (await response.json()) as ProviderMetricsResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.topology.errorProvider, "");
+});
+
+test("errorProvider still flags a recent failure on a connection that is active", async () => {
+  const db = core.getDbInstance();
+  const older = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const recent = new Date(Date.now() - 30 * 1000).toISOString();
+  db.prepare(
+    `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run("openai-live", "openai", 1, recent, recent);
+  db.prepare(
+    `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run("anthropic-disabled", "anthropic", 0, recent, recent);
+  insertCall("openai-ok", "openai", older, 200, "openai-live");
+  insertCall("openai-500", "openai", recent, 500, "openai-live");
+  insertCall("anthropic-502", "anthropic", recent, 502, "anthropic-disabled");
+
+  const response = await providerMetricsRoute.GET();
+  const body = (await response.json()) as ProviderMetricsResponse;
+
+  assert.equal(body.topology.errorProvider, "openai");
+});
+
+test("errorProvider honors OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS", async () => {
+  const previous = process.env.OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS;
+  process.env.OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS = "1";
+  try {
+    const db = core.getDbInstance();
+    const outside = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+    const inside = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    db.prepare(
+      `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run("old-live", "openai", 1, inside, inside);
+    db.prepare(
+      `INSERT INTO provider_connections (id, provider, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run("new-live", "anthropic", 1, inside, inside);
+    insertCall("openai-outside", "openai", outside, 500, "old-live");
+    insertCall("anthropic-inside", "anthropic", inside, 429, "new-live");
+
+    const response = await providerMetricsRoute.GET();
+    const body = (await response.json()) as ProviderMetricsResponse;
+    assert.equal(body.topology.errorProvider, "anthropic");
+  } finally {
+    if (previous === undefined) delete process.env.OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS;
+    else process.env.OMNIROUTE_TOPOLOGY_ERROR_WINDOW_HOURS = previous;
+  }
 });
 
 test("GET /api/provider-metrics returns sanitized 500 when metrics cannot be loaded", async () => {
