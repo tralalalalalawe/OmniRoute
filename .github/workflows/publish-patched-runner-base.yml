@@ -13,6 +13,7 @@
 name: Publish patched runner-base image
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - cursor/fix-cli-profile-catalog-401-bbdd
