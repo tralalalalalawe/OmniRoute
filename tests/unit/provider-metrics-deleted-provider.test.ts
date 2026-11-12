@@ -37,10 +37,17 @@ test("#10714: a provider deleted from provider_connections must NOT keep showing
 
   db.prepare(
     `INSERT INTO provider_connections (id, provider, created_at, updated_at) VALUES (?, ?, ?, ?)`
-  ).run("conn-openai-1", "openai", "2026-08-19T09:00:00.000Z", "2026-08-19T09:00:00.000Z");
+  ).run("conn-openai-1", "openai", new Date().toISOString(), new Date().toISOString());
   db.prepare(
     `INSERT INTO call_logs (id, timestamp, provider, status, duration, error_summary) VALUES (?, ?, ?, ?, ?, ?)`
-  ).run("openai-error", "2026-08-19T10:00:00.000Z", "openai", 500, 80, "upstream error");
+  ).run(
+    "openai-error",
+    new Date(Date.now() - 60 * 1000).toISOString(),
+    "openai",
+    500,
+    80,
+    "upstream error"
+  );
 
   // Deleted provider: historical call_logs rows exist, but no provider_connections row.
   db.prepare(
