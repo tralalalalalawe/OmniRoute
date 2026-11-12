@@ -66,12 +66,12 @@ jobs:
             OMNIROUTE_USE_TURBOPACK=0
             OMNIROUTE_BUILD_MEMORY_MB=12288
           tags: |
-            ghcr.io/tralalalalalawe/omniroute:3.8.53-profile-catalog-401
-            ghcr.io/tralalalalalawe/omniroute:3.8.53-profile-catalog-401-${{ github.sha }}
+            ghcr.io/tralalalalalawe/omniroute:3.8.53-topology-window
+            ghcr.io/tralalalalalawe/omniroute:3.8.53-topology-window-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/tralalalalalawe/OmniRoute
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=3.8.53-profile-catalog-401
+            org.opencontainers.image.version=3.8.53-topology-window
 
       - name: Record image digest
         env:
@@ -80,7 +80,7 @@ jobs:
 
       - name: Confirm the pushed tag is anonymously pullable
         env:
-          IMAGE_TAG: 3.8.53-profile-catalog-401-${{ github.sha }}
+          IMAGE_TAG: 3.8.53-topology-window-${{ github.sha }}
         run: |
           set -eu
           # The package is already public. GITHUB_TOKEN cannot PATCH /user/packages
