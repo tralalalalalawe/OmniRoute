@@ -98,3 +98,4 @@ jobs:
             exit 1
           fi
           awk 'BEGIN{IGNORECASE=1} /^docker-content-digest:/ {print}' /tmp/manifest.hdr
+# trigger

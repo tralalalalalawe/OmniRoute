@@ -42,3 +42,4 @@ jobs:
             "src/app/(dashboard)/dashboard/cli-code/components/CliCompanionPanel.tsx"
       - name: Typecheck core
         run: npm run typecheck:core
+# trigger
