@@ -15,6 +15,7 @@ on:
   push:
     branches:
       - release/v3.8.54-stayinn
+      - cursor/stayinn-v3.8.54-build
     paths:
       - .github/workflows/publish-patched-runner-base.yml
 
