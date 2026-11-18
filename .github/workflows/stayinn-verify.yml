@@ -1,0 +1,44 @@
+# Focused verification of the Stayinn patches on top of upstream v3.8.54.
+# Triggered by a push of this file on the patch branch (no default-branch dispatch).
+name: Stayinn patch verification
+
+on:
+  push:
+    branches:
+      - release/v3.8.54-stayinn
+    paths:
+      - .github/workflows/stayinn-verify.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          package-manager-cache: false
+          node-version: 24
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Focused unit tests
+        run: |
+          set -eu
+          files=$(ls tests/unit/*.test.ts tests/unit/ui/*.test.tsx tests/unit/cli-helper/*.test.ts tests/unit/db/*.test.ts 2>/dev/null | grep -E "cli-companion|pricing|profile-catalog|provider-metrics|topology|catalog|cli-helper|settings-pricing" || true)
+          echo "$files"
+          DISABLE_SQLITE_AUTO_BACKUP=true node --max-old-space-size=8192 --import tsx/esm --import ./open-sse/utils/setupPolyfill.ts --import ./tests/_setup/isolateDataDir.ts --test --test-force-exit --test-concurrency=2 $files
+      - name: Lint touched files
+        run: |
+          npx eslint --suppressions-location config/quality/eslint-suppressions.json \
+            src/lib/cli-helper/profileCatalog.ts src/app/api/v1/models/catalog.ts src/lib/db/settings/pricing.ts \
+            src/shared/utils/cliCompanion.ts src/app/api/provider-metrics/route.ts src/lib/db/callLogStats.ts \
+            src/lib/db/readCache.ts src/lib/usage/topologyErrorProvider.ts src/shared/hooks/cli/useToolBatchStatuses.ts \
+            "src/app/(dashboard)/dashboard/cli-code/CliCodePageClient.tsx" \
+            "src/app/(dashboard)/dashboard/cli-code/components/CliCompanionPanel.tsx"
+      - name: Typecheck core
+        run: npm run typecheck:core
